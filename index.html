@@ -458,7 +458,7 @@
                                 <span class="text-sky-600 text-2xl font-thin transform transition-transform duration-300">+</span>
                             </div>
                             <div class="details">
-                                <p class="mt-2 text-slate-600 text-sm">In hypergrowth, the biggest risk is scaling chaos instead of systems. When operations scale reactively without process, documentation, or clear accountability, you create bottlenecks, burnout, and compliance risk. For a company in a regulated, mission-critical space, the cost of inefficiency is compounded by the cost of errors. My approach is to create foundational frameworks like SLAs, SOPs, and performance dashboards so you can scale confidently and proactively. Growth should create leverage, not instability.</p>
+                                <p class="mt-2 text-slate-600 text-sm">In hypergrowth, the biggest risk is scaling chaos instead of systems. When operations scale reactively, without process, documentation, or clear accountability, you create bottlenecks, burnout, and compliance risk. For a company in a regulated, mission-critical space, the cost of inefficiency is compounded by the cost of errors. My approach is to create foundational frameworks like SLAs, SOPs, and performance dashboards so you can scale confidently and proactively. Growth should create leverage, not instability.</p>
                             </div>
                         </div>
                     </div>
@@ -601,74 +601,58 @@
 
         generateBtn.addEventListener('click', generateCoverLetter);
         copyBtn.addEventListener('click', () => copyToClipboard(outputDiv.innerText));
+		
+		async function generateCoverLetter() {
+			const jobTitle = document.getElementById('job-title-input').value;
+			const companyName = document.getElementById('company-name-input').value;
 
-        async function generateCoverLetter() {
-            const jobTitle = document.getElementById('job-title-input').value;
-            const companyName = document.getElementById('company-name-input').value;
+			if (!jobTitle || !companyName) {
+				alert("Please enter both a Job Title and a Company Name.");
+				return;
+			}
 
-            if (!jobTitle || !companyName) {
-                alert("Please enter both a Job Title and a Company Name.");
-                return;
-            }
+			loader.style.display = 'block';
+			generateBtnText.innerText = 'Generating...';
+			generateBtn.disabled = true;
+			
+			const resumeContext = `
+				Professional Summary: Results-driven Program and Product Management Leader with over 9 years of experience...
+				// ... (keep the rest of your resume context string as is) ...
+				Certifications: PMP.
+			`;
 
-            // Show loader and disable button
-            loader.style.display = 'block';
-            generateBtnText.innerText = 'Generating...';
-            generateBtn.disabled = true;
-            
-            const resumeContext = `
-                Professional Summary: Results-driven Program and Product Management Leader with over 9 years of experience in biotech and tech industries. Proven expertise in integrating AI-driven solutions to streamline operations, enhance productivity, and drive multimillion-dollar revenue growth. Adept at leading cross-functional teams, implementing scalable processes, and ensuring regulatory compliance to achieve strategic objectives.
-                
-                Experience:
-                - Director of Technical Operations/Quality Lead at Sun Genomics (2022-Present): Scaled operations (team from 6 to 25+, revenue from $50k to $7.5M), led SaaS/internal software projects (LIMS, ERP, QMS), built FDA-compliant QMS, reduced monthly burn by 75%, implemented AI for inventory forecasting (95% stock-out reduction).
-                - Senior Process Engineer at Sun Genomics (2019-2022): Increased production efficiency by 250%, reduced COGS by 50%, supported 8-figure capital investment.
-                - Process Engineer at Kyocera (2018-2019): Scaled production capacity by 30%.
-                - Project Engineer at CHC Consulting (2017-2018): Led a team of 5 design engineers.
+			// This is the new, secure way to call your function
+			try {
+				const response = await fetch('/.netlify/functions/generate-letter', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ 
+						jobTitle: jobTitle, 
+						companyName: companyName,
+						resumeContext: resumeContext 
+					})
+				});
 
-                Key Projects:
-                - ERP & Inventory Management Software Build: Reduced stock-outs by 95%.
-                - FDA Compliance and QMS Implementation: Passed multiple FDA audits with zero major findings, increased throughput by 3x.
-                - Custom LIMS Development: Delivered on time and budget.
-                - Multi-Product Launch: Drove $3.2M in new revenue.
-                
-                Education: M.S. Engineering Management (UCLA), B.S. Chemical and Biochemical Engineering (Colorado School of Mines).
-                
-                Certifications: PMP.
-            `;
+				const result = await response.json();
 
-            const systemPrompt = "You are a professional career assistant. Your task is to write a concise, professional, and compelling cover letter for Jesse S. LakeYoungberg based on his resume information. The letter should be tailored to the specific job title and company provided. Highlight 2-3 of his most relevant qualifications and accomplishments for the role. Keep the tone confident and direct. The letter should be around 200-250 words.";
-            const userQuery = `Job Title: ${jobTitle}, Company: ${companyName}.`;
-            const apiKey = "AIzaSyDwTO1n4BgD_L5VP27jM9cfLeAvh6WVU58"; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+				if (response.ok) {
+					outputDiv.innerText = result.letter;
+				} else {
+					throw new Error(result.error || "An unknown error occurred.");
+				}
+				
+				outputContainer.style.display = 'block';
 
-            const payload = {
-                contents: [{ parts: [{ text: `Resume Context: ${resumeContext}\n\nTask: ${userQuery}` }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-            };
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json();
-                const text = result.candidates[0].content.parts[0].text;
-                
-                outputDiv.innerText = text;
-                outputContainer.style.display = 'block';
-
-            } catch (error) {
-                console.error("Error calling Gemini API:", error);
-                outputDiv.innerText = "Sorry, an error occurred while generating the cover letter. Please try again.";
-                outputContainer.style.display = 'block';
-            } finally {
-                // Hide loader and re-enable button
-                loader.style.display = 'none';
-                generateBtnText.innerText = 'Generate Cover Letter';
-                generateBtn.disabled = false;
-            }
-        }
+			} catch (error) {
+				console.error("Error calling serverless function:", error);
+				outputDiv.innerText = `Sorry, an error occurred: ${error.message}. Please try again.`;
+				outputContainer.style.display = 'block';
+			} finally {
+				loader.style.display = 'none';
+				generateBtnText.innerText = 'Generate Cover Letter';
+				generateBtn.disabled = false;
+			}
+		}
 
         function copyToClipboard(text) {
             const textArea = document.createElement('textarea');
@@ -691,4 +675,3 @@
 
 </body>
 </html>
-
